@@ -1,7 +1,7 @@
 # 🤖 Bot da Turma (Nome Provisório)
 
 Bem-vindos ao repositório oficial do nosso bot do Discord! 
-A ideia deste projeto é principalmente exercitar o trabalho em equipe de maneira divertida
+A ideia deste projeto é principalmente exercitar o trabalho em equipe de maneira divertida.
 Projeto 100% *Open Source* feito por e para a nossa sala. 
 
 Qualquer pessoa pode abrir um *Pull Request* para adicionar funcionalidades, testar integrações e usar o projeto como *case* real no portfólio.
