@@ -3,7 +3,8 @@ Podem dar pull *request* para fazer novas sugestões / implementar as ideias.
 
 ## ⚙️ Infraestrutura Básica
 - [x] Criar repositório no GitHub com `.gitignore` e `README.md`
-- [ ] Estruturar o projeto base com Node.js e `discord.js`
+- [x] Estruturar o projeto base com Node.js e `discord.js`
+- [ ] Criar a API do bot em: https://discord.com/developers/applications
 - [ ] Configurar arquivo `.env` para esconder variáveis de ambiente
 - [ ] Criar servidor Express com rota `GET /ping` (Anti-sleep para o Render)
 - [ ] Conectar projeto ao banco de dados (Supabase)

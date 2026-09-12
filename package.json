@@ -1,0 +1,25 @@
+{
+  "name": "botdiscord",
+  "version": "1.0.0",
+  "description": "Bem-vindos ao repositório oficial do nosso bot do Discord! \r A ideia deste projeto é principalmente exercitar o trabalho em equipe de maneira divertida.\r Projeto 100% *Open Source* feito por e para a nossa sala.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hiago-21/BotDiscord.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Hiago-21/BotDiscord/issues"
+  },
+  "homepage": "https://github.com/Hiago-21/BotDiscord#readme",
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2"
+  }
+}
