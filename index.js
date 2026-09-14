@@ -28,7 +28,7 @@ const client = new Client({
 });
 
 // Evento: Quando o bot ligar e conectar no Discord, ele roda isso aqui uma vez
-client.once('ready', () => {
+client.once('clientReady', () => {
     console.log(`✅ Sucesso! Bot online e logado como ${client.user.tag}`);
 });
 
@@ -94,7 +94,7 @@ ${roteiroChat}
 
             if (iaSorteada.provedor === 'gemini') {
                 const genAI = new GoogleGenerativeAI(iaSorteada.token);
-                const model = genAI.getGenerativeModel({ model: 'gemini-3-flash' }); 
+                const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' }); 
                 // Envia o prompt turbinado com o histórico
                 const result = await model.generateContent(promptFinal);
                 respostaTexto = result.response.text();
