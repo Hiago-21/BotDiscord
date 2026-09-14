@@ -1,7 +1,7 @@
 // Importa o dotenv para o Node conseguir ler o arquivo .env
 require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const Groq = require('groq-sdk');
+const OpenAI = require('openai');
 
 // Mapeia todas as chaves que você tem no .env e qual IA ela pertence
 const chavesDisponiveis = [
@@ -33,7 +33,7 @@ client.once('ready', () => {
 });
 
 // Evento: Toda vez que alguém mandar uma mensagem no servidor
-client.on('messageCreate', (mensagem) => {
+client.on('messageCreate', async (mensagem) => {
     // Regra 1: Ignorar mensagens de outros bots
     if (mensagem.author.bot) return;
 
@@ -47,7 +47,7 @@ client.on('messageCreate', (mensagem) => {
     // Se não for nem comando nem menção, o bot ignora a mensagem e para aqui
     if (!ehComando && !botFoiMencionado) return;
 
-    // --- LÓGICA PARA MENÇÃO (IA RESPONDENDO) ---
+    // --- LÓGICA PARA MENÇÃO (A IA RESPONDENDO COM CONTEXTO) ---
     if (botFoiMencionado) {
         const textoLimpo = mensagem.content.replace(`<@${client.user.id}>`, '').trim();
         
@@ -55,36 +55,72 @@ client.on('messageCreate', (mensagem) => {
             return mensagem.reply('Fala, mestre. Marcou por quê?');
         }
 
-        const iaSorteada = sortearIA();
-        
-        // Faz o bot mostrar o status "Digitando..." no Discord
+        // 1. Faz o bot mostrar "Digitando..." enquanto processa
         await mensagem.channel.sendTyping();
+
+        // 2. Puxa as últimas 6 mensagens do canal para criar a memória
+        const historicoDiscord = await mensagem.channel.messages.fetch({ limit: 6 });
+        
+        // O Discord entrega as mensagens da mais nova para a mais velha. Vamos inverter a ordem.
+        const mensagensOrdenadas = Array.from(historicoDiscord.values()).reverse();
+
+        // 3. Monta um "roteiro" para a IA ler
+        let roteiroChat = "Abaixo está o histórico recente da conversa no Discord:\n\n";
+        
+        mensagensOrdenadas.forEach((msg) => {
+            // Ignora comandos com "!" para não sujar o contexto
+            if (msg.content.startsWith('!')) return; 
+
+            const nomeAutor = msg.author.username;
+            const falaLimpa = msg.content.replace(`<@${client.user.id}>`, '').trim();
+            
+            if (falaLimpa) {
+                roteiroChat += `[${nomeAutor}]: ${falaLimpa}\n`;
+            }
+        });
+
+        // 4. Junta as instruções de personalidade com o histórico
+        const promptFinal = `
+Você é o bot da nossa turma de Ciência da Computação.
+Use o histórico abaixo para entender o contexto. Responda de forma direta à última mensagem.
+
+${roteiroChat}
+`;
+
+        const iaSorteada = sortearIA();
 
         try {
             let respostaTexto = '';
 
             if (iaSorteada.provedor === 'gemini') {
                 const genAI = new GoogleGenerativeAI(iaSorteada.token);
-                // Usando o flash pois é o modelo gratuito mais rápido
-                const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); 
-                const result = await model.generateContent(textoLimpo);
+                const model = genAI.getGenerativeModel({ model: 'gemini-3-flash' }); 
+                // Envia o prompt turbinado com o histórico
+                const result = await model.generateContent(promptFinal);
                 respostaTexto = result.response.text();
                 
             } else if (iaSorteada.provedor === 'groq') {
-                const groq = new Groq({ apiKey: iaSorteada.token });
-                const chatCompletion = await groq.chat.completions.create({
-                    messages: [{ role: 'user', content: textoLimpo }],
-                    model: 'llama3-8b-8192', // Modelo excelente e absurdamente rápido da Groq
+                // Usa o cliente da OpenAI, mas aponta para o servidor da Groq
+                const groq = new OpenAI({
+                    baseURL: 'https://api.groq.com/openai/v1',
+                    apiKey: iaSorteada.token,
                 });
+                
+                const chatCompletion = await groq.chat.completions.create({
+                    messages: [
+                        { role: 'system', content: promptFinal },
+                        { role: 'user', content: textoLimpo }
+                    ],
+                    model: 'openai/gpt-oss-20b', // O modelo ultrarrápido validado na sua pesquisa
+                });
+                
                 respostaTexto = chatCompletion.choices[0].message.content;
             }
 
-            // O Discord tem limite de 2000 caracteres. Se a IA falar demais, cortamos.
             if (respostaTexto.length > 2000) {
                 respostaTexto = respostaTexto.substring(0, 1995) + '...';
             }
 
-            // Responde marcando qual IA foi sorteada (só para vocês acompanharem o teste)
             return mensagem.reply(`*[Respondido via ${iaSorteada.provedor.toUpperCase()}]*\n\n${respostaTexto}`);
 
         } catch (erro) {
