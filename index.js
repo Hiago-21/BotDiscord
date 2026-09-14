@@ -1,5 +1,19 @@
 // Importa o dotenv para o Node conseguir ler o arquivo .env
 require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
+
+// Mapeia todas as chaves que você tem no .env e qual IA ela pertence
+const chavesDisponiveis = [
+    { provedor: 'gemini', token: process.env.GEMINI_KEY_1 },
+    { provedor: 'gemini', token: process.env.GEMINI_KEY_2 },
+    { provedor: 'groq', token: process.env.GROQ_KEY_1 }
+].filter(chave => chave.token); // O filter remove automaticamente as chaves que estiverem vazias/undefined
+
+function sortearIA() {
+    const indice = Math.floor(Math.random() * chavesDisponiveis.length);
+    return chavesDisponiveis[indice];
+}
 
 // Importa as classes do discord.js
 const { Client, GatewayIntentBits } = require('discord.js');
@@ -33,17 +47,50 @@ client.on('messageCreate', (mensagem) => {
     // Se não for nem comando nem menção, o bot ignora a mensagem e para aqui
     if (!ehComando && !botFoiMencionado) return;
 
-    // --- LÓGICA PARA MENÇÃO (Futura IA) ---
+    // --- LÓGICA PARA MENÇÃO (IA RESPONDENDO) ---
     if (botFoiMencionado) {
-        // Tira a menção (@BotDaSala) do texto para sobrar só a pergunta da pessoa
         const textoLimpo = mensagem.content.replace(`<@${client.user.id}>`, '').trim();
         
-        if (textoLimpo === 'ping') {
-            return mensagem.reply('Pong! Você me chamou marcando meu nome.');
+        if (!textoLimpo) {
+            return mensagem.reply('Fala, mestre. Marcou por quê?');
         }
 
-        // Resposta padrão se marcarem ele sem ser o comando ping
-        return mensagem.reply('Você me chamou? Em breve terei uma IA para te responder direito!');
+        const iaSorteada = sortearIA();
+        
+        // Faz o bot mostrar o status "Digitando..." no Discord
+        await mensagem.channel.sendTyping();
+
+        try {
+            let respostaTexto = '';
+
+            if (iaSorteada.provedor === 'gemini') {
+                const genAI = new GoogleGenerativeAI(iaSorteada.token);
+                // Usando o flash pois é o modelo gratuito mais rápido
+                const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); 
+                const result = await model.generateContent(textoLimpo);
+                respostaTexto = result.response.text();
+                
+            } else if (iaSorteada.provedor === 'groq') {
+                const groq = new Groq({ apiKey: iaSorteada.token });
+                const chatCompletion = await groq.chat.completions.create({
+                    messages: [{ role: 'user', content: textoLimpo }],
+                    model: 'llama3-8b-8192', // Modelo excelente e absurdamente rápido da Groq
+                });
+                respostaTexto = chatCompletion.choices[0].message.content;
+            }
+
+            // O Discord tem limite de 2000 caracteres. Se a IA falar demais, cortamos.
+            if (respostaTexto.length > 2000) {
+                respostaTexto = respostaTexto.substring(0, 1995) + '...';
+            }
+
+            // Responde marcando qual IA foi sorteada (só para vocês acompanharem o teste)
+            return mensagem.reply(`*[Respondido via ${iaSorteada.provedor.toUpperCase()}]*\n\n${respostaTexto}`);
+
+        } catch (erro) {
+            console.error('Erro na chamada da IA:', erro);
+            return mensagem.reply('Deu ruim na API. O servidor do estagiário pegou fogo.');
+        }
     }
 
     // --- LÓGICA PARA COMANDOS (Ex: !ping) ---
