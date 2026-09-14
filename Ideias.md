@@ -8,7 +8,8 @@ Podem dar pull *request* para fazer novas sugestões / implementar as ideias.
 - [x] Configurar arquivo `.env` para esconder variáveis de ambiente
 - [ ] Criar servidor Express com rota `GET /ping` (Anti-sleep para o Render)
 - [ ] Conectar projeto ao banco de dados (Supabase)
-- [ ] Implementar a função de Rotação de API Keys (Load Balancer) para as contas da IA
+- [x] Implementar a função de Rotação de API Keys (Load Balancer) para as contas da IA
+- [x] Bot guarda as ultimas 6 mensagens do chat para analisar o contexto
 
 ## 🤖 Integração com IA (Gemini/Groq/Outro)
 - [x] Criar o evento para o bot ler mensagens com `@BotDaSala`

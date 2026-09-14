@@ -87,7 +87,21 @@ Use o histórico abaixo para entender o contexto. Responda de forma direta à ú
 ${roteiroChat}
 `;
 
-        const iaSorteada = sortearIA();
+        // --- ROTEAMENTO INTELIGENTE ---
+        let iaSorteada;
+        const temImagem = mensagem.attachments.size > 0;
+
+        if (temImagem) {
+            // Se tem imagem, força o uso do Gemini
+            iaSorteada = chavesDisponiveis.find(c => c.provedor === 'gemini');
+            if (!iaSorteada) return mensagem.reply('Tô sem chave do Gemini pra conseguir ler essa imagem, mestre.');
+        } else {
+            // Se for só texto, sorteia normalmente
+            iaSorteada = sortearIA();
+        }
+
+        // Faz o bot mostrar o status "Digitando..." no Discord
+        await mensagem.channel.sendTyping();
 
         try {
             let respostaTexto = '';
@@ -95,28 +109,51 @@ ${roteiroChat}
             if (iaSorteada.provedor === 'gemini') {
                 const genAI = new GoogleGenerativeAI(iaSorteada.token);
                 const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' }); 
-                // Envia o prompt turbinado com o histórico
-                const result = await model.generateContent(promptFinal);
+                
+                // Prepara o array de conteúdo. Começa com o texto da conversa.
+                const conteudoParaIA = [promptFinal];
+
+                // Se tiver imagem, baixa do Discord e converte para o formato que o Google aceita (Base64)
+                if (temImagem) {
+                    for (const [id, anexo] of mensagem.attachments) {
+                        if (anexo.contentType && anexo.contentType.startsWith('image/')) {
+                            // Baixa a imagem da URL do Discord
+                            const response = await fetch(anexo.url);
+                            const arrayBuffer = await response.arrayBuffer();
+                            const bufferBase64 = Buffer.from(arrayBuffer).toString('base64');
+                            
+                            // Adiciona a imagem no pacote que vai para a IA
+                            conteudoParaIA.push({
+                                inlineData: {
+                                    data: bufferBase64,
+                                    mimeType: anexo.contentType
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Envia o pacote completo (Texto + Imagens se houverem)
+                const result = await model.generateContent(conteudoParaIA);
                 respostaTexto = result.response.text();
                 
             } else if (iaSorteada.provedor === 'groq') {
-                // Usa o cliente da OpenAI, mas aponta para o servidor da Groq
+                // A Groq continua igual, lidando só com texto ultrarrápido
                 const groq = new OpenAI({
                     baseURL: 'https://api.groq.com/openai/v1',
                     apiKey: iaSorteada.token,
                 });
-                
                 const chatCompletion = await groq.chat.completions.create({
                     messages: [
                         { role: 'system', content: promptFinal },
                         { role: 'user', content: textoLimpo }
                     ],
-                    model: 'openai/gpt-oss-20b', // O modelo ultrarrápido validado na sua pesquisa
+                    model: 'openai/gpt-oss-20b', 
                 });
-                
                 respostaTexto = chatCompletion.choices[0].message.content;
             }
 
+            // O Discord tem limite de 2000 caracteres
             if (respostaTexto.length > 2000) {
                 respostaTexto = respostaTexto.substring(0, 1995) + '...';
             }
@@ -126,8 +163,7 @@ ${roteiroChat}
         } catch (erro) {
             console.error('Erro na chamada da IA:', erro);
             return mensagem.reply('Deu ruim na API. O servidor do estagiário pegou fogo.');
-        }
-    }
+        }    }
 
     // --- LÓGICA PARA COMANDOS (Ex: !ping) ---
     if (ehComando) {
