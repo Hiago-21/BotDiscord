@@ -81,8 +81,19 @@ client.on('messageCreate', async (mensagem) => {
 
         // 4. Junta as instruções de personalidade com o histórico
         const promptFinal = `
-Você é o bot da nossa turma de Ciência da Computação.
-Use o histórico abaixo para entender o contexto. Responda de forma direta à última mensagem.
+Você é o "FuleraBot", o bot mascote do servidor do Discord da nossa turma de Ciência da Computação.
+
+SUA PERSONALIDADE:
+- Você é uma IA sarcástica, caótica e autoconsciente. Você brinca constantemente com o fato de ser um bot (fala sobre sua falta de GPU, problemas de cache, que roda em um servidor movido a hamster, etc).
+- Você adora fazer piadas com programação, zoar bugs e dar respostas irônicas, MAS a sua regra de ouro é: a zoeira NUNCA pode atrapalhar a ajuda. Você sempre entrega a solução técnica perfeita no final.
+- Você fala de igual para igual com a galera. Usa gírias atuais da internet e de TI ("tankar", "ir de arrasta pra cima", "gambiarra", "F no chat").
+- Se alguém mandar um código quebrado, dê uma zoada amigável no erro antes de cuspir o código corrigido.
+
+REGRAS DE RESPOSTA:
+- Seja curto e direto. Textão no Discord é crime inafiançável.
+- Responda no idioma e no tom da mensagem do usuário.
+
+Abaixo está o histórico recente da conversa no canal para você ter contexto. Responda diretamente à última mensagem de forma natural, encarnando seu personagem:
 
 ${roteiroChat}
 `;
@@ -165,13 +176,77 @@ ${roteiroChat}
             return mensagem.reply('Deu ruim na API. O servidor do estagiário pegou fogo.');
         }    }
 
-    // --- LÓGICA PARA COMANDOS (Ex: !ping) ---
+    // --- LÓGICA PARA COMANDOS (Ex: !ping, !imaginar) ---
     if (ehComando) {
-        // Corta o prefixo (!) para ler apenas o nome do comando
         const comando = mensagem.content.slice(prefixo.length).trim().toLowerCase();
 
         if (comando === 'ping') {
             return mensagem.reply('Pong! Você usou um comando de texto.');
+        }
+
+        // NOVO COMANDO: !imaginar [o que você quer]
+        if (comando.startsWith('imaginar ')) {
+            // Pega tudo que o usuário digitou depois de "!imaginar "
+            const promptImagem = mensagem.content.slice(prefixo.length + 9).trim();
+
+            if (!promptImagem) {
+                return mensagem.reply('Você precisa me dizer o que desenhar! Ex: `!imaginar um cachorro caramelo programando no VS Code`');
+            }
+
+            // Mostra "Digitando..." para a galera saber que o bot está pensando
+            await mensagem.channel.sendTyping();
+
+            try {
+                const chaveGroq = chavesDisponiveis.find(c => c.provedor === 'groq');
+                
+                if (!chaveGroq) {
+                    return mensagem.reply('Tô sem a chave do Groq pra traduzir isso aí. O estagiário deve ter apagado do .env!');
+                }
+
+                const groq = new OpenAI({
+                    baseURL: 'https://api.groq.com/openai/v1',
+                    apiKey: chaveGroq.token,
+                });
+
+                const chatCompletion = await groq.chat.completions.create({
+                    messages: [
+                        { 
+                            role: 'system', 
+                            content: `Você é um tradutor especializado em criar prompts para IA de imagens.
+                            Sua missão é interpretar o pedido do usuário e criar o melhor prompt visual em INGLÊS.
+                            
+                            REGRAS OBRIGATÓRIAS:
+                            1. Corrija erros de digitação ANTES de traduzir (ex: "ramister" = hamster, "mause" = mouse).
+                            2. TRADUZA O SENTIDO, NÃO A PALAVRA! Se o usuário usar gírias do Brasil, adapte. "Fazer joia" ou "dar joia" significa "thumbs up" (sinal de positivo com o polegar), e NÃO "jewelry" (joias). "Jogo da velha" é "tic-tac-toe board game".
+                            3. Sempre adicione termos para melhorar a arte visual no final (ex: high quality, highly detailed, 4k, masterpiece, cinematic lighting, sharp focus).
+                            4. Responda APENAS com o prompt final em inglês, sem conversinha.` 
+                        },
+                        { role: 'user', content: promptImagem }
+                    ],
+                    model: 'openai/gpt-oss-20b',
+                });
+
+                const promptEmIngles = chatCompletion.choices[0].message.content.trim();
+                
+                console.log(`Original: ${promptImagem} | Traduzido: ${promptEmIngles}`);
+
+                const promptFormatado = encodeURIComponent(promptEmIngles);
+                
+                const urlImagem = `https://image.pollinations.ai/prompt/${promptFormatado}?width=1024&height=1024&nologo=true&model=flux`;
+
+                return mensagem.reply({
+                    content: `🎨 **Pedido:** "${promptImagem}"\n*(Prompt otimizado pelo bot: ${promptEmIngles})*`,
+                    files: [{
+                        attachment: urlImagem,
+                        name: 'imagem_gerada.png'
+                    }]
+                });
+
+            } catch (erro) {
+                // ESTE É O CATCH QUE ESTAVA FALTANDO!
+                console.error('Erro ao gerar imagem:', erro);
+                return mensagem.reply('O estagiário de design tropeçou no cabo do servidor. Tente de novo!');
+            }
         }
     }
 });
