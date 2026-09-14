@@ -13,7 +13,7 @@ Podem dar pull *request* para fazer novas sugestões / implementar as ideias.
 
 ## 🤖 Integração com IA (Gemini/Groq/Outro)
 - [x] Criar o evento para o bot ler mensagens com `@BotDaSala`
-- [ ] Configurar o *Prompt* de Sistema (Personalidade do Bot)
+- [x] Configurar o *Prompt* de Sistema (Personalidade do Bot)
 - [ ] Criar comando `/resumo`: Bot lê o histórico recente do chat e a IA cria um TL;DR do caos
 - [ ] Criar comando `/socorro`: IA analisa um bloco de código enviado e aponta o erro
 
@@ -34,4 +34,4 @@ Podem dar pull *request* para fazer novas sugestões / implementar as ideias.
 - [ ] Criar comando `/desespero [notas]`: Calcular nota necessária na prova final para não reprovar
 - [ ] Criar comando `/desculpa`: Bot consome uma API para dar uma desculpa técnica aleatória para um bug
 - [ ] **Bingo da Aula:** Gerar uma cartela (imagem ou texto) com frases clichês dos professores
-- [ ] **Cardápio do RU:** Script de *web scraping* que roda toda manhã para avisar o cardápio da merenda
+- [ ] **Cardápio:** Script de *web scraping* que roda toda manhã para avisar o cardápio da merenda
