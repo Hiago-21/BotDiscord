@@ -1,5 +1,7 @@
 // Importa o dotenv para o Node conseguir ler o arquivo .env
 require('dotenv').config();
+
+const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
 
@@ -253,3 +255,16 @@ ${roteiroChat}
 
 // A última linha é o que efetivamente liga o bot usando a chave do .env
 client.login(process.env.DISCORD_TOKEN);
+
+// --- SISTEMA ANTI-SLEEP (SERVIDOR WEB) ---
+const app = express();
+// O Render define a porta automaticamente, ou usa a 3000 no seu PC
+const PORT = process.env.PORT || 3000; 
+
+app.get('/', (req, res) => {
+    res.send('O FuleraBot está online, tomando café e julgando seu código.');
+});
+
+app.listen(PORT, () => {
+    console.log(`🌐 Servidor web rodando na porta ${PORT}`);
+});
